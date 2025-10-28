@@ -64,10 +64,10 @@ services:
       - ./db-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -proot"]
-      interval: 1m
+      interval: 5s
       timeout: 10s
       retries: 5
-      start_period: 10s
+      start_period: 30s
 
   redis:
     image: redis:7
@@ -78,7 +78,7 @@ services:
       - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 1m
+      interval: 5s
       timeout: 10s
       retries: 5
       start_period: 10s

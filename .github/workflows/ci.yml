@@ -27,7 +27,6 @@ jobs:
       run: |
         echo "DB_HOST=127.0.0.1" > .env
         echo "DB_PORT=3306" >> .env
-        # L'utilisateur 'labo05' est suffisant car docker-compose le crée
         echo "DB_USER=labo05" >> .env
         echo "DB_PASSWORD=labo05" >> .env
         echo "DB_NAME=labo05_db" >> .env
@@ -40,13 +39,38 @@ jobs:
 
     - name: Wait for MySQL to be healthy
       run: |
-        echo "Waiting for MySQL container to be healthy..."
-        # Cette boucle attend que le healthcheck défini dans docker-compose.yml passe au statut 'healthy'
-        until [ "healthy" = "$(docker inspect -f '{{.State.Health.Status}}' $(docker-compose ps -q mysql))" ]; do
-            echo -n ".";
-            sleep 1;
+        echo "Waiting for MySQL to be ready..."
+        timeout=90
+        elapsed=0
+        
+        # Attendre que le conteneur existe
+        until docker compose ps mysql | grep -q mysql; do
+          echo "Waiting for MySQL container to start..."
+          sleep 2
+          elapsed=$((elapsed + 2))
+          if [ $elapsed -ge 30 ]; then
+            echo "❌ MySQL container did not start"
+            exit 1
+          fi
         done
-        echo " MySQL is healthy!"
+        
+        # Attendre le healthcheck
+        until [ "healthy" = "$(docker inspect -f '{{.State.Health.Status}}' $(docker compose ps -q mysql))" ]; do
+          echo -n "."
+          sleep 2
+          elapsed=$((elapsed + 2))
+          if [ $elapsed -ge $timeout ]; then
+            echo "❌ MySQL did not become healthy in time"
+            docker compose logs mysql
+            exit 1
+          fi
+        done
+        
+        echo " ✅ MySQL is healthy!"
+        
+        # Vérifier que la connexion fonctionne vraiment
+        docker compose exec -T mysql mysql -u labo05 -plabo05 labo05_db -e "SELECT 1;" > /dev/null 2>&1
+        echo "✅ MySQL connection verified!"
 
     - name: Run automated tests
       env:
