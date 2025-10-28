@@ -2,6 +2,11 @@
 CREATE DATABASE IF NOT EXISTS labo05_db;
 USE labo05_db;
 
+-- Create user that can connect from anywhere (for CI/CD tests)
+CREATE USER IF NOT EXISTS 'labo05'@'%' IDENTIFIED BY 'labo05';
+GRANT ALL PRIVILEGES ON labo05_db.* TO 'labo05'@'%';
+FLUSH PRIVILEGES;
+
 -- Users table
 DROP TABLE IF EXISTS users;
 CREATE TABLE users (
