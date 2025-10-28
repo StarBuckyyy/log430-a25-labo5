@@ -27,8 +27,9 @@ jobs:
       run: |
         echo "DB_HOST=127.0.0.1" > .env
         echo "DB_PORT=3306" >> .env
-        echo "DB_USER=root" >> .env
-        echo "DB_PASSWORD=root" >> .env
+        # L'utilisateur 'labo05' est suffisant car docker-compose le crée
+        echo "DB_USER=labo05" >> .env
+        echo "DB_PASSWORD=labo05" >> .env
         echo "DB_NAME=labo05_db" >> .env
         echo "REDIS_HOST=127.0.0.1" >> .env
         echo "REDIS_PORT=6379" >> .env
@@ -37,10 +38,15 @@ jobs:
     - name: Start services for tests
       run: docker compose up -d mysql redis
 
-    - name: Wait for services to be ready
+    - name: Wait for MySQL to be healthy
       run: |
-        echo "Waiting for services to initialize..."
-        sleep 15
+        echo "Waiting for MySQL container to be healthy..."
+        # Cette boucle attend que le healthcheck défini dans docker-compose.yml passe au statut 'healthy'
+        until [ "healthy" = "$(docker inspect -f '{{.State.Health.Status}}' $(docker-compose ps -q mysql))" ]; do
+            echo -n ".";
+            sleep 1;
+        done
+        echo " MySQL is healthy!"
 
     - name: Run automated tests
       env:
