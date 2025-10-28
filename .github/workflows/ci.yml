@@ -41,6 +41,7 @@ jobs:
     - name: Run automated tests
       env:
         CI: true
+        PTHONPATH: ./src
       run: python -m pytest
 
     - name: Stop test services
