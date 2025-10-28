@@ -12,7 +12,7 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -41,7 +41,7 @@ jobs:
     - name: Run automated tests
       env:
         CI: true
-      run: pytest
+      run: python -m pytest
 
     - name: Stop test services
       if: always()
