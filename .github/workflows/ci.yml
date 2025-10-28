@@ -34,6 +34,11 @@ jobs:
         echo "REDIS_PORT=6379" >> .env
         echo "REDIS_DB=0" >> .env
 
+    - name: Clean up old containers and volumes
+      run: |
+        docker compose down -v
+        docker volume prune -f
+
     - name: Start services for tests
       run: docker compose up -d mysql redis
 
