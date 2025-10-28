@@ -38,6 +38,11 @@ jobs:
     - name: Start services for tests
       run: docker compose up -d mysql redis
 
+    - name: Wait for MySQL to be ready
+      run: |
+        echo "Waiting for MySQL to start..."
+        sleep 30
+
     - name: Run automated tests
       env:
         CI: true
