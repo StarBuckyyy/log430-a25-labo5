@@ -6,6 +6,7 @@ Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 
 import mysql.connector
 import redis
+import os
 import config
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -32,6 +33,11 @@ def get_redis_conn():
 def get_sqlalchemy_session():
     """Get an SQLAlchemy ORM session using env variables"""
     connection_string = f'mysql+mysqlconnector://{config.DB_USER}:{config.DB_PASSWORD}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
-    engine = create_engine(connection_string, connect_args={'auth_plugin': 'caching_sha2_password'})
+
+    if os.getenv('CI') == 'true':
+        auth_plugin = 'mysql_native_password'
+    else:
+        auth_plugin = 'caching_sha2_password'
+    engine = create_engine(connection_string, connect_args={'auth_plugin': auth_plugin})
     Session = sessionmaker(bind=engine)
     return Session()
