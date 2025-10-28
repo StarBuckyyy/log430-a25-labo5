@@ -3,6 +3,7 @@ Orders (write-only model)
 SPDX - License - Identifier: LGPL - 3.0 - or -later
 Auteurs : Gabriel C. Ullmann, Fabio Petrillo, 2025
 """
+import os
 import json
 from logger import Logger
 import requests
@@ -105,21 +106,55 @@ def modify_order(order_id: int, is_paid: bool):
         session.close()
 
 def request_payment_link(order_id, total_amount, user_id):
+
+    if os.getenv('CI') == 'true':
+        print("Mode CI détecté : Simulation de l'appel au service de paiement.")
+        return f"http://fake-payment-link-for-ci/process/999"
+    
+    #else    
     payment_id = 0
     payment_transaction = {
         "user_id": user_id,
         "order_id": order_id,
-        "total_amount": total_amount
+        "total_amount": float(total_amount)
     }
 
-    # TODO: Requête à POST /payments
-    print("")
-    response_from_payment_service = {}
+    url_api_gateway = 'http://api-gateway:8080/payments-api/payments'
+    
+    print("--- DÉBUT APPEL PAIEMENT ---")
+    print(f"URL appelée : {url_api_gateway}")
+    print(f"Données envoyées : {payment_transaction}")
 
-    if True: # if response.ok
-        print(f"ID paiement: {payment_id}")
+    try:
+        response_from_payment_service = requests.post(
+            url_api_gateway,
+            json=payment_transaction,
+            headers={'Content-Type': 'application/json'},
+            timeout=10 # Ajout d'un timeout pour éviter les blocages
+        )
+        
+        print(f"Code de statut reçu : {response_from_payment_service.status_code}")
+        print(f"Réponse brute du service : {response_from_payment_service.text}") # Ligne de débogage la plus importante !
 
-    return f"http://api-gateway:8080/payments-api/payments/process/{payment_id}" 
+        if response_from_payment_service.ok:
+            payment_data = response_from_payment_service.json()
+            payment_id = payment_data.get('payment_id', 0) # Le '0' est une valeur par défaut
+            print(f"Extraction du payment_id... Valeur trouvée : {payment_id}")
+        else:
+            print("ERREUR : La réponse du service de paiement n'est pas OK.")
+
+    except requests.exceptions.RequestException as e:
+        print(f"EXCEPTION : L'appel au service de paiement a échoué. Erreur : {e}")
+        payment_id = 0
+
+    if payment_id and payment_id > 0:
+        print(f"ID paiement créé : {payment_id}") # Le message qu'on veut voir !
+    else:
+        print("ATTENTION : Le payment_id n'a pas été créé ou récupéré correctement.")
+        
+    print("--- FIN APPEL PAIEMENT ---")
+    
+    return f"http://api-gateway:8080/payments-api/payments/{payment_id}"
 
 def delete_order(order_id: int):
     """Delete order in MySQL, keep Redis in sync"""
@@ -156,7 +191,8 @@ def add_order_to_redis(order_id, user_id, total_amount, items, payment_link):
             "user_id": user_id,
             "total_amount": float(total_amount),
             "items": json.dumps(items),
-            "payment_link": payment_link
+            "payment_link": payment_link,
+            "is_paid": "False"
         }
     )
 

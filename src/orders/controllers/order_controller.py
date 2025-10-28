@@ -35,13 +35,12 @@ def update_order(request):
         status = modify_order(order_id, is_paid=is_paid)
         
         # update Redis
-        r = get_redis_conn()
-        order = r.hgetall(f"order:{order_id}")
-        order['is_paid'] = str(is_paid)
-        r.hset(f"order:{order_id}", mapping=order)
+        if status:
+            r = get_redis_conn()
+            # On met à jour SEULEMENT le champ is_paid pour la bonne commande
+            r.hset(f"order:{order_id}", "is_paid", str(is_paid)) 
+            logger.debug(f"Redis mis à jour pour la commande {order_id}: is_paid={is_paid}")
 
-        # response
-        logger.debug("Statut actuel", status)
         return jsonify({'updated': status}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

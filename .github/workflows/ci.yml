@@ -1,0 +1,53 @@
+name: CI/CD for Store Manager
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-test-and-deploy:
+    name: Build, Test and Deploy
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Create .env file for testing
+      run: |
+        echo "DB_HOST=127.0.0.1" > .env
+        echo "DB_PORT=3306" >> .env
+        echo "DB_USER=labo05" >> .env
+        echo "DB_PASSWORD=labo05" >> .env
+        echo "DB_NAME=labo05_db" >> .env
+        echo "REDIS_HOST=127.0.0.1" >> .env
+        echo "REDIS_PORT=6379" >> .env
+        echo "REDIS_DB=0" >> .env
+
+    - name: Start services for tests
+      run: docker compose up -d mysql redis
+
+    - name: Run automated tests
+      env:
+        CI: true
+      run: pytest
+
+    - name: Stop test services
+      if: always()
+      run: docker compose down
+
+    - name: Deploy new version to VM
+      if: success()
+      run: |
+        echo "✅ Tests passed. Deploying new version..."
+        docker compose up -d --build
