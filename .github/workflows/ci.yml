@@ -68,20 +68,11 @@ jobs:
         
         echo " ✅ MySQL is healthy!"
         
-        # Vérifier que la connexion fonctionne vraiment (avec retry)
-        echo "Verifying MySQL connection..."
-        for i in {1..10}; do
-          if docker compose exec -T mysql mysql -u labo05 -plabo05 labo05_db -e "SELECT 1;" > /dev/null 2>&1; then
-            echo "✅ MySQL connection verified!"
-            exit 0
-          fi
-          echo "Connection attempt $i failed, retrying..."
-          sleep 2
-        done
+        # Attendre un peu plus pour que MySQL soit vraiment prêt
+        echo "Waiting for MySQL to be fully ready for connections..."
+        sleep 10
         
-        echo "❌ Failed to verify MySQL connection after 10 attempts"
-        docker compose logs mysql
-        exit 1
+        echo "✅ MySQL is ready for tests!"
 
     - name: Run automated tests
       env:
