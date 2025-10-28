@@ -31,13 +31,18 @@ def get_redis_conn():
     return redis.Redis(connection_pool=pool, decode_responses=True)
 
 def get_sqlalchemy_session():
-    """Get an SQLAlchemy ORM session using env variables"""
-    connection_string = f'mysql+mysqlconnector://{config.DB_USER}:{config.DB_PASSWORD}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
-
     if os.getenv('CI') == 'true':
-        auth_plugin = 'mysql_native_password'
+        # On utilise PyMySQL, plus robuste pour les connexions simples en CI.
+        # Le format de la chaîne de connexion change légèrement.
+        connection_string = f'mysql+pymysql://{config.DB_USER}:{config.DB_PASSWORD}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
+        # PyMySQL n'a pas besoin de l'argument 'auth_plugin' dans create_engine.
+        engine = create_engine(connection_string)
+        print("INFO: Mode CI détecté. Utilisation du driver PyMySQL.") # Log pour confirmer
     else:
-        auth_plugin = 'caching_sha2_password'
-    engine = create_engine(connection_string, connect_args={'auth_plugin': auth_plugin})
+        # En environnement local, on garde la configuration d'origine.
+        connection_string = f'mysql+mysqlconnector://{config.DB_USER}:{config.DB_PASSWORD}@{config.DB_HOST}:{config.DB_PORT}/{config.DB_NAME}'
+        engine = create_engine(connection_string, connect_args={'auth_plugin': 'caching_sha2_password'})
+    # --- FIN DE LA CORRECTION DÉFINITIVE ---
+        
     Session = sessionmaker(bind=engine)
     return Session()
